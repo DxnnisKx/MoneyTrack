@@ -1,49 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoneyTrack - Personal Finance</title>
-    <link rel="icon" type="image/x-icon" href="money.jpg">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <title>MoneyTrack</title>
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add this before </body> -->
+    <script type="module">
+        // Check if user is authenticated on page load
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        const supabaseUrl = 'https://siatsmslhjzqttdxfshe.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpYXRzbXNsaGp6cXR0ZHhmc2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODUyMjgsImV4cCI6MjA3NDk2MTIyOH0.OSNl7pwyVnta3QSJPA93lZtC5kHKlhNq87bC9tUKqu0'
+        const supabase = createClient(supabaseUrl, supabaseKey)
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) {
+                window.location.href = '/auth.html'
+            }
+        })
+    </script>
+    <script src="app.js"></script>
+    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="money.png">
 </head>
+
 <body>
-    <!-- Liquid Background -->
-    <div class="liquid-background">
-        <div class="blob blob1"></div>
-        <div class="blob blob2"></div>
-        <div class="blob blob3"></div>
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
     </div>
 
-    <!-- Glass Navigation -->
-    <nav class="glass-nav">
-        <div class="nav-content">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
             <div class="nav-brand">
-                <div class="brand-icon">₿</div>
+                <i class="bi bi-wallet2"></i>
                 <span>MoneyTrack</span>
             </div>
+
             <div class="nav-menu">
-                <button class="nav-pill active" data-page="home">
+                <button class="nav-link active" data-page="dashboard">
                     <i class="bi bi-house"></i>
-                    <span>Home</span>
+                    <span class="nav-text">Dashboard</span>
                 </button>
-                <button class="nav-pill" data-page="transactions">
+                <button class="nav-link" data-page="add">
                     <i class="bi bi-plus-circle"></i>
-                    <span>Add</span>
+                    <span class="nav-text">Add</span>
                 </button>
-                <button class="nav-pill" data-page="analytics">
+                <button class="nav-link" data-page="analytics">
                     <i class="bi bi-bar-chart"></i>
-                    <span>Stats</span>
+                    <span class="nav-text">Analytics</span>
                 </button>
-                <button class="nav-pill" data-page="history">
-                    <i class="bi bi-clock"></i>
-                    <span>History</span>
+                <button class="nav-link" data-page="history">
+                    <i class="bi bi-clock-history"></i>
+                    <span class="nav-text">History</span>
                 </button>
-                <button class="nav-pill" data-page="settings">
+                <button class="nav-link" data-page="settings">
                     <i class="bi bi-gear"></i>
-                    <span>Settings</span>
+                    <span class="nav-text">Settings</span>
                 </button>
             </div>
         </div>
@@ -51,124 +81,161 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Home Page -->
-        <section class="page active" id="home">
-            <div class="liquid-container">
-                <div class="balance-card">
-                    <div class="balance-label">Current Balance</div>
-                    <div class="balance-bubble-container">
-                        <div class="liquid-bubble" id="moneyBubble">
-                            <div class="bubble-liquid"></div>
-                            <div class="bubble-content">
-                                <div class="balance-amount" id="bubbleAmount">$0.00</div>
+
+        <!-- Dashboard Page -->
+        <section class="page active" id="dashboard">
+            <div class="dashboard-container">
+                <!-- Balance Card with Dynamic Liquid Fill -->
+                <div class="balance-card glass">
+                    <div class="liquid-container">
+                        <div class="liquid-bubble">
+                            <div class="liquid" id="liquidFill">
+                                <svg class="liquid-wave" viewBox="0 0 500 150" preserveAspectRatio="none">
+                                    <path d="M0,100 C150,200 350,0 500,100 L500,150 L0,150 Z"></path>
+                                </svg>
+                                <svg class="liquid-wave wave-back" viewBox="0 0 500 150" preserveAspectRatio="none">
+                                    <path d="M0,100 C150,0 350,200 500,100 L500,150 L0,150 Z"></path>
+                                </svg>
+                                <div class="liquid-bg"></div>
+                            </div>
+                            <div class="balance-info">
+                                <span class="balance-label">Total Balance</span>
+                                <h1 class="balance-amount" id="balanceAmount">$0.00</h1>
+                                <span class="balance-percent" id="balancePercent">0% capacity</span>
                             </div>
                         </div>
                     </div>
-                    <div class="today-stats">
-                        <div class="stat-pill income">
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-icon income">
                             <i class="bi bi-arrow-up"></i>
-                            <span id="todayIncome">+$0.00</span>
                         </div>
-                        <div class="stat-pill expense">
+                        <div class="stat-info">
+                            <span class="stat-label">Income</span>
+                            <span class="stat-value" id="totalIncome">+$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card glass">
+                        <div class="stat-icon expense">
                             <i class="bi bi-arrow-down"></i>
-                            <span id="todayExpense">-$0.00</span>
                         </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Expenses</span>
+                            <span class="stat-value" id="totalExpenses">-$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="recent-section glass">
+                    <h3>Recent Activity</h3>
+                    <div id="recentList" class="recent-list">
+                        <p class="empty-message">No transactions yet</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Transactions Page -->
-        <section class="page" id="transactions">
-            <div class="page-container">
-                <div class="glass-panel">
-                    <h2 class="panel-title">New Transaction</h2>
-                    <div class="form-group">
-                        <div class="floating-input">
-                            <input type="number" id="amount" placeholder=" " step="0.01" required>
-                            <label for="amount">Amount</label>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="floating-input">
-                            <input type="text" id="description" placeholder=" " required>
-                            <label for="description">Description</label>
-                        </div>
-                    </div>
-                    <div class="button-group">
-                        <button class="liquid-button add" id="addMoneyBtn">
-                            <span class="button-content">
-                                <i class="bi bi-plus-circle"></i>
-                                Add Money
-                            </span>
-                            <div class="button-liquid"></div>
+        <!-- Add Transaction Page -->
+        <section class="page" id="add">
+            <div class="add-container">
+                <h2>Add Transaction</h2>
+
+                <div class="transaction-form glass">
+                    <!-- Transaction Type Toggle -->
+                    <div class="type-toggle">
+                        <button class="type-btn active" onclick="setType('income')">
+                            <i class="bi bi-plus"></i> Income
                         </button>
-                        <button class="liquid-button subtract" id="subtractMoneyBtn">
-                            <span class="button-content">
-                                <i class="bi bi-dash-circle"></i>
-                                Subtract
-                            </span>
-                            <div class="button-liquid"></div>
+                        <button class="type-btn" onclick="setType('expense')">
+                            <i class="bi bi-minus"></i>
+                            - Expense
+                        </button>
+                    </div>
+
+                    <!-- Amount Input -->
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <div class="amount-input">
+                            <span class="currency">$</span>
+                            <input type="number" id="amount" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="description" placeholder="What's this for?">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button class="submit-btn" id="submitBtn" onclick="addTransaction()">
+                        + Add Income
+                    </button>
+                </div>
+
+                <!-- Set Initial Capital -->
+                <div class="initial-capital glass">
+                    <h3><i class="bi bi-piggy-bank"></i> Set Initial Capital</h3>
+                    <p>Set your starting balance</p>
+                    <div class="capital-input">
+                        <div class="amount-input">
+                            <span class="currency">$</span>
+                            <input type="number" id="initialCapital" placeholder="0.00" step="0.01">
+                        </div>
+                        <button class="capital-btn" onclick="setInitialCapital()">
+                            Set Capital
                         </button>
                     </div>
                 </div>
-            </div>
         </section>
 
         <!-- Analytics Page -->
         <section class="page" id="analytics">
-            <div class="page-container">
-                <h2 class="page-title">Analytics</h2>
-                <div class="stats-grid">
-                    <div class="stat-card income">
-                        <div class="stat-icon">
-                            <i class="bi bi-graph-up-arrow"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="monthlyIncome">$0.00</div>
-                            <div class="stat-label">Monthly Income</div>
-                        </div>
-                    </div>
-                    <div class="stat-card expense">
-                        <div class="stat-icon">
-                            <i class="bi bi-graph-down-arrow"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="monthlyExpenses">$0.00</div>
-                            <div class="stat-label">Monthly Expenses</div>
+            <div class="analytics-container">
+                <h2>Analytics</h2>
+
+                <div class="charts-grid">
+                    <!-- Waterfall Chart -->
+                    <div class="chart-card glass waterfall-card">
+                        <h3>Cash Flow Waterfall</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="waterfallChart"></canvas>
                         </div>
                     </div>
-                    <div class="stat-card balance">
-                        <div class="stat-icon">
-                            <i class="bi bi-wallet2"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="monthlyNet">$0.00</div>
-                            <div class="stat-label">Net Balance</div>
+
+                    <div class="chart-card glass">
+                        <h3>Income vs Expenses</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="comparisonChart"></canvas>
                         </div>
                     </div>
-                    <div class="stat-card total">
-                        <div class="stat-icon">
-                            <i class="bi bi-receipt"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="totalTransactions">0</div>
-                            <div class="stat-label">Transactions</div>
+
+                    <div class="chart-card glass">
+                        <h3>Balance Trend</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="trendChart"></canvas>
                         </div>
                     </div>
                 </div>
-                <div class="detail-stats">
-                    <div class="detail-item">
-                        <span>Average Transaction</span>
-                        <strong id="avgTransaction">$0.00</strong>
+
+                <!-- Summary Stats -->
+                <div class="summary-grid">
+                    <div class="summary-card glass">
+                        <span class="summary-label">This Month</span>
+                        <span class="summary-value" id="monthTotal">$0.00</span>
                     </div>
-                    <div class="detail-item">
-                        <span>Biggest Income</span>
-                        <strong id="biggestIncome" class="text-success">$0.00</strong>
+                    <div class="summary-card glass">
+                        <span class="summary-label">Average Daily</span>
+                        <span class="summary-value" id="dailyAvg">$0.00</span>
                     </div>
-                    <div class="detail-item">
-                        <span>Biggest Expense</span>
-                        <strong id="biggestExpense" class="text-danger">$0.00</strong>
+                    <div class="summary-card glass">
+                        <span class="summary-label">Transactions</span>
+                        <span class="summary-value" id="transCount">0</span>
                     </div>
                 </div>
             </div>
@@ -176,55 +243,80 @@
 
         <!-- History Page -->
         <section class="page" id="history">
-            <div class="page-container">
+            <div class="history-container">
                 <div class="history-header">
-                    <h2 class="page-title">History</h2>
-                    <select class="glass-select" id="filterPeriod">
-                        <option value="all">All Time</option>
-                        <option value="month">This Month</option>
-                        <option value="week">This Week</option>
-                        <option value="today">Today</option>
-                    </select>
+                    <h2>History</h2>
+                    <input type="text" class="search-input" placeholder="Search..." onkeyup="searchHistory(this.value)">
                 </div>
-                <div class="transactions-container" id="transactionHistory">
-                    <!-- Transactions will be loaded here -->
+
+                <div id="historyList" class="history-list">
+                    <p class="empty-message">No transactions yet</p>
                 </div>
             </div>
         </section>
 
         <!-- Settings Page -->
         <section class="page" id="settings">
-            <div class="page-container">
-                <div class="glass-panel">
-                    <h2 class="panel-title">Settings</h2>
-                    <div class="settings-section">
-                        <h4>Initial Capital</h4>
-                        <div class="input-group-custom">
-                            <input type="number" id="initialCapital" placeholder="0.00" step="0.01">
-                            <button class="liquid-button primary" id="setCapitalBtn">Set Capital</button>
+            <div class="settings-container">
+                <h2>Settings</h2>
+
+                <!-- Bubble Capacity Settings -->
+                <div class="settings-section glass">
+                    <h3><i class="bi bi-droplet"></i> Balance Bubble Capacity</h3>
+                    <p>Set the maximum capacity for your balance bubble (100% full)</p>
+                    <div class="capacity-setting">
+                        <div class="amount-input">
+                            <span class="currency">$</span>
+                            <input type="number" id="bubbleCapacity" placeholder="10000" step="100">
                         </div>
+                        <button class="capacity-btn" onclick="setBubbleCapacity()">
+                            Set Capacity
+                        </button>
                     </div>
-                    <div class="settings-section">
-                        <h4>Export Data</h4>
-                        <div class="export-buttons">
-                            <button class="glass-button" id="exportTxtBtn">
-                                <i class="bi bi-file-text"></i> Text File
-                            </button>
-                            <button class="glass-button" id="exportCsvBtn">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> CSV File
-                            </button>
-                        </div>
+                    <p class="capacity-info">Current capacity: <span id="currentCapacity">$10,000</span></p>
+                </div>
+
+                <!-- Appearance -->
+                <div class="settings-section glass">
+                    <h3><i class="bi bi-palette"></i> Appearance</h3>
+                    <div class="theme-options">
+                        <button class="theme-btn active" onclick="setTheme('dark')">
+                            <span class="theme-preview dark"></span>
+                            Dark
+                        </button>
+                        <button class="theme-btn" onclick="setTheme('light')">
+                            <span class="theme-preview light"></span>
+                            Light
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Export Data -->
+                <div class="settings-section glass">
+                    <h3><i class="bi bi-database"></i> Export Data</h3>
+                    <div class="data-buttons">
+                        <button class="data-btn" onclick="exportAsCSV()">
+                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                            Export as CSV
+                        </button>
+                        <button class="data-btn" onclick="exportAsText()">
+                            <i class="bi bi-file-text"></i>
+                            Export as Text
+                        </button>
+                        <button class="data-btn danger" onclick="clearData()">
+                            <i class="bi bi-trash"></i>
+                            Clear All Data
+                        </button>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Notifications -->
-    <div id="notification-container"></div>
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>
