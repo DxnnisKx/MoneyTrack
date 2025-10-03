@@ -15,22 +15,7 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Add this before </body> -->
-    <script type="module">
-        // Check if user is authenticated on page load
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-
-        const supabaseUrl = 'https://siatsmslhjzqttdxfshe.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpYXRzbXNsaGp6cXR0ZHhmc2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODUyMjgsImV4cCI6MjA3NDk2MTIyOH0.OSNl7pwyVnta3QSJPA93lZtC5kHKlhNq87bC9tUKqu0'
-        const supabase = createClient(supabaseUrl, supabaseKey)
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) {
-                window.location.href = '/auth.html'
-            }
-        })
-    </script>
-    <script src="app.js"></script>
+    
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/x-icon" href="money.png">

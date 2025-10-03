@@ -745,18 +745,24 @@ body {
 }
 
 /* Toast */
+/* Toast Notification - Add or update this */
+/* Faster Toast Animation */
 .toast {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
     padding: 1rem 1.5rem;
     background: var(--surface);
+    color: var(--text);
     border: 1px solid var(--border);
     border-radius: 8px;
     transform: translateY(100px);
     opacity: 0;
-    transition: all 0.3s;
-    z-index: 1000;
+    transition: all 0.2s ease-out; /* Faster: 0.2s instead of 0.3s */
+    z-index: 10000;
+    max-width: 350px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
 }
 
 .toast.show {

@@ -73,6 +73,8 @@ function setupNavigation() {
 
 // Switch pages
 function switchPage(pageName) {
+  console.log("Switching to page:", pageName);
+
   // Update nav
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.classList.remove("active");
@@ -85,15 +87,26 @@ function switchPage(pageName) {
   document.querySelectorAll(".page").forEach((page) => {
     page.classList.remove("active");
   });
-  document.getElementById(pageName).classList.add("active");
 
-  // Update page-specific content
-  if (pageName === "analytics") {
-    updateCharts();
-  } else if (pageName === "history") {
-    updateHistory();
-  } else if (pageName === "settings") {
-    updateCapacityDisplay();
+  const targetPage = document.getElementById(pageName);
+  if (targetPage) {
+    targetPage.classList.add("active");
+
+    // Update page-specific content
+    if (pageName === "analytics") {
+      console.log("Loading analytics...");
+      setTimeout(() => {
+        updateCharts();
+      }, 100);
+    } else if (pageName === "history") {
+      console.log("Loading history...");
+      updateHistory();
+    } else if (pageName === "settings") {
+      console.log("Loading settings...");
+      updateCapacityDisplay();
+    }
+  } else {
+    console.error("Page not found:", pageName);
   }
 }
 
@@ -104,17 +117,16 @@ function addUserInfo() {
     const userName =
       currentUser.user_metadata.full_name || currentUser.email.split("@")[0];
 
-    // Check if user info already exists
     if (!document.querySelector(".user-info")) {
       const userInfo = document.createElement("div");
       userInfo.className = "user-info";
       userInfo.style.cssText =
         "display: flex; align-items: center; gap: 1rem; margin-left: auto; margin-right: 1rem;";
       userInfo.innerHTML = `
-                <span style="color: var(--text-secondary); font-size: 0.875rem;">
-                    <i class="bi bi-person-circle"></i> ${userName}
-                </span>
-            `;
+        <span style="color: var(--text-secondary); font-size: 0.875rem;">
+          <i class="bi bi-person-circle"></i> ${userName}
+        </span>
+      `;
 
       navContainer.insertBefore(
         userInfo,
@@ -123,7 +135,6 @@ function addUserInfo() {
     }
   }
 
-  // Add sign out button if not exists
   const navMenu = document.querySelector(".nav-menu");
   if (navMenu && !document.querySelector(".sign-out-btn")) {
     const signOutBtn = document.createElement("button");
@@ -146,7 +157,6 @@ async function signOut() {
 // Load user data from Supabase
 async function loadUserData() {
   try {
-    // Load settings
     const { data: settings, error: settingsError } = await supabase
       .from("user_settings")
       .select("*")
@@ -164,11 +174,9 @@ async function loadUserData() {
         document.body.classList.add("light-theme");
       }
     } else {
-      // Create initial settings for new user
       await saveSettings();
     }
 
-    // Load transactions
     const { data: transactionData, error: transError } = await supabase
       .from("transactions")
       .select("*")
@@ -197,17 +205,45 @@ async function loadUserData() {
 // Save settings to Supabase
 async function saveSettings() {
   try {
-    const { error } = await supabase.from("user_settings").upsert({
-      user_id: currentUser.id,
-      balance: balance,
-      max_balance: maxBalance,
-      theme: document.body.classList.contains("light-theme") ? "light" : "dark",
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) throw error;
+    const { data: existing } = await supabase
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .single();
+    
+    if (existing) {
+      // Update existing settings
+      const { error } = await supabase
+        .from("user_settings")
+        .update({
+          balance: balance,
+          max_balance: maxBalance,
+          theme: document.body.classList.contains("light-theme") ? "light" : "dark",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", currentUser.id);
+      
+      if (error) throw error;
+    } else {
+      // Insert new settings
+      const { error } = await supabase
+        .from("user_settings")
+        .insert({
+          user_id: currentUser.id,
+          balance: balance,
+          max_balance: maxBalance,
+          theme: document.body.classList.contains("light-theme") ? "light" : "dark",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      
+      if (error) throw error;
+    }
   } catch (error) {
-    console.error("Error saving settings:", error);
+    // Only log error if it's not a duplicate key error
+    if (error.code !== "23505") {
+      console.error("Error saving settings:", error);
+    }
   }
 }
 
@@ -221,23 +257,53 @@ window.setType = function (type) {
   event.target.classList.add("active");
 
   const submitBtn = document.getElementById("submitBtn");
-  submitBtn.textContent = type === "income" ? "+ Add Income" : "- Add Expense";
-  submitBtn.style.background =
-    type === "income" ? "var(--success)" : "var(--danger)";
+  if (submitBtn) {
+    submitBtn.textContent =
+      type === "income" ? "+ Add Income" : "- Add Expense";
+    submitBtn.style.background =
+      type === "income" ? "var(--success)" : "var(--danger)";
+  }
 };
 
 // Add Transaction - MAKE GLOBAL
 window.addTransaction = async function () {
   const amount = parseFloat(document.getElementById("amount").value);
   const description = document.getElementById("description").value;
-
+  
   if (!amount || amount <= 0) {
-    showToast("Please enter a valid amount");
+    showToast("Please enter a valid amount", "error");
     return;
   }
-
+  
+  // Show immediate feedback
+  showToast("Adding transaction...", "info");
+  
+  // Optimistically update UI first
+  const tempTransaction = {
+    id: 'temp-' + Date.now(),
+    type: currentType,
+    amount: amount,
+    description: description || currentType,
+    date: new Date().toISOString(),
+  };
+  
+  transactions.unshift(tempTransaction);
+  
+  if (currentType === "income") {
+    balance += amount;
+  } else {
+    balance -= amount;
+  }
+  
+  // Clear form immediately
+  document.getElementById("amount").value = "";
+  document.getElementById("description").value = "";
+  
+  // Update UI immediately
+  updateUI();
+  
   try {
-    // Add to Supabase
+    // Then save to database
     const { data, error } = await supabase
       .from("transactions")
       .insert({
@@ -248,40 +314,39 @@ window.addTransaction = async function () {
       })
       .select()
       .single();
-
+    
     if (error) throw error;
-
-    // Update local data
-    const transaction = {
-      id: data.id,
-      type: currentType,
-      amount: amount,
-      description: description || currentType,
-      date: data.created_at,
-    };
-
-    transactions.unshift(transaction);
-
-    if (currentType === "income") {
-      balance += amount;
-    } else {
-      balance -= amount;
+    
+    // Replace temp transaction with real one
+    const index = transactions.findIndex(t => t.id === tempTransaction.id);
+    if (index !== -1) {
+      transactions[index] = {
+        id: data.id,
+        type: currentType,
+        amount: amount,
+        description: description || currentType,
+        date: data.created_at,
+      };
     }
-
-    // Save updated balance
+    
     await saveSettings();
-
-    // Clear form
-    document.getElementById("amount").value = "";
-    document.getElementById("description").value = "";
-
-    updateUI();
-    showToast(
-      `${currentType === "income" ? "Income" : "Expense"} added successfully`
-    );
+    showToast(`✓ ${currentType === "income" ? "Income" : "Expense"} of $${amount.toFixed(2)} added`, "success");
   } catch (error) {
+    // Rollback on error
     console.error("Error:", error);
-    showToast("Error adding transaction");
+    
+    // Remove temp transaction
+    transactions = transactions.filter(t => t.id !== tempTransaction.id);
+    
+    // Rollback balance
+    if (currentType === "income") {
+      balance -= amount;
+    } else {
+      balance += amount;
+    }
+    
+    updateUI();
+    showToast("Error adding transaction", "error");
   }
 };
 
@@ -290,12 +355,11 @@ window.setInitialCapital = async function () {
   const amount = parseFloat(document.getElementById("initialCapital").value);
 
   if (!amount || amount <= 0) {
-    showToast("Please enter a valid amount");
+    showToast("Please enter a valid amount", "error");
     return;
   }
 
   try {
-    // Add transaction to Supabase
     const { data, error } = await supabase
       .from("transactions")
       .insert({
@@ -309,7 +373,6 @@ window.setInitialCapital = async function () {
 
     if (error) throw error;
 
-    // Update local data
     transactions.unshift({
       id: data.id,
       type: "initial",
@@ -320,17 +383,15 @@ window.setInitialCapital = async function () {
 
     balance = amount;
 
-    // Save settings
     await saveSettings();
 
-    // Clear input
     document.getElementById("initialCapital").value = "";
 
     updateUI();
-    showToast(`Initial capital set to $${amount.toFixed(2)}`);
+    showToast(`✓ Initial capital set to $${amount.toFixed(2)}`, "success");
   } catch (error) {
     console.error("Error:", error);
-    showToast("Error setting initial capital");
+    showToast("Error setting initial capital", "error");
   }
 };
 
@@ -362,50 +423,50 @@ window.quickAdd = async function (amount, description) {
 
     await saveSettings();
     updateUI();
-    showToast(`Quick expense: ${description} -$${amount}`);
+    showToast(`✓ Quick expense: ${description} -$${amount}`, "success");
   } catch (error) {
     console.error("Error:", error);
-    showToast("Error adding quick expense");
+    showToast("Error adding quick expense", "error");
   }
 };
 
 // Set Bubble Capacity - MAKE GLOBAL
 window.setBubbleCapacity = async function () {
-  const capacity = parseFloat(document.getElementById("bubbleCapacity").value);
+  console.log("setBubbleCapacity called");
+
+  const capacityInput = document.getElementById("bubbleCapacity");
+  if (!capacityInput) {
+    console.error("Capacity input not found");
+    return;
+  }
+
+  const capacity = parseFloat(capacityInput.value);
 
   if (!capacity || capacity <= 0) {
-    showToast("Please enter a valid capacity amount");
+    showToast("Please enter a valid capacity amount", "error");
     return;
   }
 
   maxBalance = capacity;
+  capacityInput.value = "";
 
-  // Clear input
-  document.getElementById("bubbleCapacity").value = "";
-
-  // Update display
   updateCapacityDisplay();
 
-  // Save to Supabase
-  await saveSettings();
+  if (currentUser) {
+    await saveSettings();
+  }
 
-  // Update UI to reflect new capacity
   updateUI();
-
-  showToast(`Bubble capacity set to $${capacity.toFixed(2)}`);
+  showToast(`✓ Bubble capacity set to $${capacity.toFixed(2)}`, "success");
 };
 
 // Update UI
 function updateUI() {
-  // Update balance display
   document.getElementById("balanceAmount").textContent = `$${balance.toFixed(
     2
   )}`;
-
-  // Update liquid fill animation
   updateLiquidFill();
 
-  // Calculate totals
   let totalIncome = 0;
   let totalExpenses = 0;
 
@@ -424,190 +485,184 @@ function updateUI() {
     "totalExpenses"
   ).textContent = `-$${totalExpenses.toFixed(2)}`;
 
-  // Update recent transactions
   updateRecent();
 
-  // Update analytics if visible
   if (document.getElementById("analytics").classList.contains("active")) {
     updateCharts();
   }
+}
 
-  // Dynamic Liquid Fill Animation
-  function updateLiquidFill() {
-    const liquid = document.getElementById("liquidFill");
-    const percentEl = document.getElementById("balancePercent");
+// Dynamic Liquid Fill Animation
+function updateLiquidFill() {
+  const liquid = document.getElementById("liquidFill");
+  const percentEl = document.getElementById("balancePercent");
 
-    // Calculate fill percentage based on user-defined capacity
-    let fillPercent = (balance / maxBalance) * 100;
-    fillPercent = Math.max(0, Math.min(100, fillPercent)); // Clamp between 0-100
+  if (!liquid || !percentEl) return;
 
-    // Update liquid height
-    liquid.style.height = `${fillPercent}%`;
+  let fillPercent = (balance / maxBalance) * 100;
+  fillPercent = Math.max(0, Math.min(100, fillPercent));
 
-    // Update percentage text
-    percentEl.textContent = `${fillPercent.toFixed(1)}% capacity`;
+  liquid.style.height = `${fillPercent}%`;
+  percentEl.textContent = `${fillPercent.toFixed(1)}% capacity`;
 
-    // Change color based on balance
-    if (balance < 0) {
-      liquid.style.filter = "hue-rotate(-60deg)"; // Red for negative
-    } else if (fillPercent > 80) {
-      liquid.style.filter = "hue-rotate(60deg)"; // Green for high balance
-    } else {
-      liquid.style.filter = "none"; // Default blue
-    }
+  if (balance < 0) {
+    liquid.style.filter = "hue-rotate(-60deg)";
+  } else if (fillPercent > 80) {
+    liquid.style.filter = "hue-rotate(60deg)";
+  } else {
+    liquid.style.filter = "none";
+  }
+}
+
+// Update Recent Transactions
+function updateRecent() {
+  const recentList = document.getElementById("recentList");
+  if (!recentList) return;
+
+  const recent = transactions.slice(0, 5);
+
+  if (recent.length === 0) {
+    recentList.innerHTML = '<p class="empty-message">No transactions yet</p>';
+    return;
   }
 
-  function updateRecent() {
-    const recentList = document.getElementById("recentList");
-    const recent = transactions.slice(0, 5);
+  recentList.innerHTML = recent
+    .map((t) => {
+      const sign = t.type === "expense" ? "-" : "+";
+      const className = t.type === "expense" ? "expense" : "income";
 
-    if (recent.length === 0) {
-      recentList.innerHTML = '<p class="empty-message">No transactions yet</p>';
-      return;
-    }
+      return `
+      <div class="transaction-item ${className}">
+        <div class="transaction-info">
+          <span class="transaction-desc">${t.description}</span>
+          <span class="transaction-date">${new Date(
+            t.date
+          ).toLocaleDateString()}</span>
+        </div>
+        <span class="transaction-amount ${className}">
+          ${sign}$${t.amount.toFixed(2)}
+        </span>
+      </div>
+    `;
+    })
+    .join("");
+}
 
-    recentList.innerHTML = recent
-      .map((t) => {
-        const sign = t.type === "expense" ? "-" : "+";
-        const className = t.type === "expense" ? "expense" : "income";
+// Update History
+function updateHistory() {
+  console.log("Updating history with", transactions.length, "transactions");
 
-        return `
-            <div class="transaction-item ${className}">
-                <div class="transaction-info">
-                    <span class="transaction-desc">${t.description}</span>
-                    <span class="transaction-date">${new Date(
-                      t.date
-                    ).toLocaleDateString()}</span>
-                </div>
-                <span class="transaction-amount ${className}">
-                    ${sign}$${t.amount.toFixed(2)}
-                </span>
-            </div>
-        `;
-      })
-      .join("");
+  const historyList = document.getElementById("historyList");
+  if (!historyList) {
+    console.error("History list element not found");
+    return;
   }
 
-  // History
-  function updateHistory() {
-    const historyList = document.getElementById("historyList");
-
-    if (transactions.length === 0) {
-      historyList.innerHTML =
-        '<p class="empty-message">No transactions yet</p>';
-      return;
-    }
-
-    historyList.innerHTML = transactions
-      .map((t) => {
-        const sign = t.type === "expense" ? "-" : "+";
-        const className = t.type === "expense" ? "expense" : "income";
-
-        return `
-            <div class="transaction-item ${className}">
-                <div class="transaction-info">
-                    <span class="transaction-desc">${t.description}</span>
-                    <span class="transaction-date">${new Date(
-                      t.date
-                    ).toLocaleDateString()} ${new Date(
-          t.date
-        ).toLocaleTimeString()}</span>
-                </div>
-                <span class="transaction-amount ${className}">
-                    ${sign}$${t.amount.toFixed(2)}
-                </span>
-            </div>
-        `;
-      })
-      .join("");
+  if (transactions.length === 0) {
+    historyList.innerHTML = '<p class="empty-message">No transactions yet</p>';
+    return;
   }
 
-  // Search History - MAKE GLOBAL
-  window.searchHistory = function (term) {
-    const items = document.querySelectorAll("#historyList .transaction-item");
-    items.forEach((item) => {
-      const text = item.textContent.toLowerCase();
-      item.style.display = text.includes(term.toLowerCase()) ? "flex" : "none";
-    });
-  };
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  );
 
-  // Charts
-  function initCharts() {
-    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue(
-      "--text-secondary"
-    );
-    Chart.defaults.borderColor = getComputedStyle(
-      document.body
-    ).getPropertyValue("--border");
+  historyList.innerHTML = sortedTransactions
+    .map((t) => {
+      const sign = t.type === "expense" ? "-" : "+";
+      const className = t.type === "expense" ? "expense" : "income";
+      const date = new Date(t.date);
+
+      return `
+      <div class="transaction-item ${className}">
+        <div class="transaction-info">
+          <span class="transaction-desc">${t.description}</span>
+          <span class="transaction-date">
+            ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+          </span>
+        </div>
+        <span class="transaction-amount ${className}">
+          ${sign}$${t.amount.toFixed(2)}
+        </span>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+// Search History - MAKE GLOBAL
+window.searchHistory = function (term) {
+  const items = document.querySelectorAll("#historyList .transaction-item");
+  items.forEach((item) => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(term.toLowerCase()) ? "flex" : "none";
+  });
+};
+
+// Initialize Charts
+function initCharts() {
+  if (typeof Chart !== "undefined") {
+    Chart.defaults.color = "#94a3b8";
+    Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
+    Chart.defaults.font.family = "Inter, sans-serif";
+  } else {
+    console.error("Chart.js not loaded");
   }
+}
 
-  function updateCharts() {
+// Update Charts
+function updateCharts() {
+  try {
     updateWaterfallChart();
     updateComparisonChart();
     updateTrendChart();
     updateSummary();
+  } catch (error) {
+    console.error("Error updating charts:", error);
+  }
+}
+
+// Waterfall Chart
+function updateWaterfallChart() {
+  const ctx = document.getElementById("waterfallChart");
+  if (!ctx) {
+    console.error("Waterfall chart canvas not found");
+    return;
   }
 
-  // Waterfall Chart
-  function updateWaterfallChart() {
-    const ctx = document.getElementById("waterfallChart");
-    if (!ctx) return;
+  if (charts.waterfall) {
+    charts.waterfall.destroy();
+  }
 
-    // Prepare waterfall data
-    const waterfallData = [];
-    const waterfallLabels = ["Start"];
-    const waterfallColors = ["#6366f1"];
-    let runningTotal = 0;
+  let incomeTotal = 0;
+  let expenseTotal = 0;
 
-    // Group transactions by type for waterfall
-    let incomeTotal = 0;
-    let expenseTotal = 0;
-
-    transactions.forEach((t) => {
-      if (t.type === "income" || t.type === "initial") {
-        incomeTotal += t.amount;
-      } else if (t.type === "expense") {
-        expenseTotal += t.amount;
-      }
-    });
-
-    // Start value
-    waterfallData.push([0, 0]);
-
-    // Income bar
-    if (incomeTotal > 0) {
-      waterfallLabels.push("Income");
-      waterfallData.push([runningTotal, runningTotal + incomeTotal]);
-      waterfallColors.push("#22c55e");
-      runningTotal += incomeTotal;
+  transactions.forEach((t) => {
+    if (t.type === "income" || t.type === "initial") {
+      incomeTotal += t.amount;
+    } else if (t.type === "expense") {
+      expenseTotal += t.amount;
     }
+  });
 
-    // Expense bar
-    if (expenseTotal > 0) {
-      waterfallLabels.push("Expenses");
-      waterfallData.push([runningTotal, runningTotal - expenseTotal]);
-      waterfallColors.push("#ef4444");
-      runningTotal -= expenseTotal;
-    }
-
-    // End balance
-    waterfallLabels.push("Balance");
-    waterfallData.push([0, runningTotal]);
-    waterfallColors.push(runningTotal >= 0 ? "#6366f1" : "#ef4444");
-
-    if (charts.waterfall) {
-      charts.waterfall.destroy();
-    }
-
+  try {
     charts.waterfall = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: waterfallLabels,
+        labels: ["Start", "Income", "Expenses", "End"],
         datasets: [
           {
-            data: waterfallData,
-            backgroundColor: waterfallColors,
-            barPercentage: 0.7,
+            label: "Cash Flow",
+            data: [0, incomeTotal, -expenseTotal, incomeTotal - expenseTotal],
+            backgroundColor: [
+              "#6366f1",
+              "#22c55e",
+              "#ef4444",
+              incomeTotal - expenseTotal >= 0 ? "#6366f1" : "#ef4444",
+            ],
           },
         ],
       },
@@ -617,337 +672,328 @@ function updateUI() {
         plugins: {
           legend: {
             display: false,
-          },
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                const label = context.label;
-                const value = context.raw;
-                if (Array.isArray(value)) {
-                  const diff = value[1] - value[0];
-                  return `${label}: $${Math.abs(diff).toFixed(2)}`;
-                }
-                return `${label}: $${value.toFixed(2)}`;
-              },
-            },
           },
         },
         scales: {
           y: {
             beginAtZero: true,
-            ticks: {
-              callback: function (value) {
-                return "$" + value.toFixed(0);
-              },
-            },
           },
         },
       },
     });
+  } catch (error) {
+    console.error("Error creating waterfall chart:", error);
+  }
+}
+
+// Comparison Chart
+function updateComparisonChart() {
+  const ctx = document.getElementById("comparisonChart");
+  if (!ctx) return;
+
+  let income = 0;
+  let expenses = 0;
+
+  transactions.forEach((t) => {
+    if (t.type === "income" || t.type === "initial") {
+      income += t.amount;
+    } else if (t.type === "expense") {
+      expenses += t.amount;
+    }
+  });
+
+  if (charts.comparison) {
+    charts.comparison.destroy();
   }
 
-  function updateComparisonChart() {
-    const ctx = document.getElementById("comparisonChart");
-    if (!ctx) return;
+  charts.comparison = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Income", "Expenses"],
+      datasets: [
+        {
+          data: [income, expenses],
+          backgroundColor: ["#22c55e", "#ef4444"],
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom",
+        },
+      },
+    },
+  });
+}
 
-    let income = 0;
-    let expenses = 0;
+// Trend Chart
+function updateTrendChart() {
+  const ctx = document.getElementById("trendChart");
+  if (!ctx) return;
 
+  const days = [];
+  const balances = [];
+  let runningBalance = balance;
+
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    days.push(date.toLocaleDateString("en", { weekday: "short" }));
+
+    let dayBalance = runningBalance;
     transactions.forEach((t) => {
-      if (t.type === "income" || t.type === "initial") {
-        income += t.amount;
-      } else if (t.type === "expense") {
-        expenses += t.amount;
-      }
-    });
-
-    if (charts.comparison) {
-      charts.comparison.destroy();
-    }
-
-    charts.comparison = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["Income", "Expenses"],
-        datasets: [
-          {
-            data: [income, expenses],
-            backgroundColor: ["#22c55e", "#ef4444"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "bottom",
-          },
-        },
-      },
-    });
-  }
-
-  function updateTrendChart() {
-    const ctx = document.getElementById("trendChart");
-    if (!ctx) return;
-
-    // Get last 7 days
-    const days = [];
-    const balances = [];
-    let runningBalance = balance;
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      days.push(date.toLocaleDateString("en", { weekday: "short" }));
-
-      // Calculate balance for that day
-      let dayBalance = runningBalance;
-      transactions.forEach((t) => {
-        const tDate = new Date(t.date);
-        if (tDate > date) {
-          if (t.type === "income" || t.type === "initial") {
-            dayBalance -= t.amount;
-          } else if (t.type === "expense") {
-            dayBalance += t.amount;
-          }
-        }
-      });
-      balances.push(dayBalance);
-    }
-
-    if (charts.trend) {
-      charts.trend.destroy();
-    }
-
-    charts.trend = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: days,
-        datasets: [
-          {
-            label: "Balance",
-            data: balances,
-            borderColor: "#6366f1",
-            backgroundColor: "rgba(99, 102, 241, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            ticks: {
-              callback: function (value) {
-                return "$" + value.toFixed(0);
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  function updateSummary() {
-    // This month total
-    const now = new Date();
-    const monthTransactions = transactions.filter((t) => {
       const tDate = new Date(t.date);
-      return (
-        tDate.getMonth() === now.getMonth() &&
-        tDate.getFullYear() === now.getFullYear()
-      );
-    });
-
-    let monthTotal = 0;
-    monthTransactions.forEach((t) => {
-      if (t.type === "income" || t.type === "initial") {
-        monthTotal += t.amount;
-      } else if (t.type === "expense") {
-        monthTotal -= t.amount;
+      if (tDate > date) {
+        if (t.type === "income" || t.type === "initial") {
+          dayBalance -= t.amount;
+        } else if (t.type === "expense") {
+          dayBalance += t.amount;
+        }
       }
     });
-
-    document.getElementById("monthTotal").textContent = `$${monthTotal.toFixed(
-      2
-    )}`;
-
-    // Daily average
-    const daysInMonth = now.getDate();
-    const dailyAvg = Math.abs(monthTotal) / daysInMonth;
-    document.getElementById("dailyAvg").textContent = `$${dailyAvg.toFixed(2)}`;
-
-    // Transaction count
-    document.getElementById("transCount").textContent = transactions.length;
+    balances.push(dayBalance);
   }
 
-  // Settings Functions - MAKE GLOBAL
-  window.setTheme = function (theme) {
-    document.querySelectorAll(".theme-btn").forEach((btn) => {
-      btn.classList.remove("active");
-    });
-    event.target.classList.add("active");
+  if (charts.trend) {
+    charts.trend.destroy();
+  }
 
-    if (theme === "light") {
-      document.body.classList.add("light-theme");
+  charts.trend = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: days,
+      datasets: [
+        {
+          label: "Balance",
+          data: balances,
+          borderColor: "#6366f1",
+          backgroundColor: "rgba(99, 102, 241, 0.1)",
+          tension: 0.4,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: function (value) {
+              return "$" + value.toFixed(0);
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+// Update Summary
+function updateSummary() {
+  const now = new Date();
+  const monthTransactions = transactions.filter((t) => {
+    const tDate = new Date(t.date);
+    return (
+      tDate.getMonth() === now.getMonth() &&
+      tDate.getFullYear() === now.getFullYear()
+    );
+  });
+
+  let monthTotal = 0;
+  monthTransactions.forEach((t) => {
+    if (t.type === "income" || t.type === "initial") {
+      monthTotal += t.amount;
+    } else if (t.type === "expense") {
+      monthTotal -= t.amount;
+    }
+  });
+
+  const monthTotalEl = document.getElementById("monthTotal");
+  if (monthTotalEl) monthTotalEl.textContent = `$${monthTotal.toFixed(2)}`;
+
+  const daysInMonth = now.getDate();
+  const dailyAvg = Math.abs(monthTotal) / daysInMonth;
+  const dailyAvgEl = document.getElementById("dailyAvg");
+  if (dailyAvgEl) dailyAvgEl.textContent = `$${dailyAvg.toFixed(2)}`;
+
+  const transCountEl = document.getElementById("transCount");
+  if (transCountEl) transCountEl.textContent = transactions.length;
+}
+
+// Settings Functions - MAKE GLOBAL
+window.setTheme = function (theme) {
+  document.querySelectorAll(".theme-btn").forEach((btn) => {
+    btn.classList.remove("active");
+  });
+  event.target.classList.add("active");
+
+  if (theme === "light") {
+    document.body.classList.add("light-theme");
+  } else {
+    document.body.classList.remove("light-theme");
+  }
+
+  saveSettings();
+  showToast(`✓ Theme changed to ${theme}`, "success");
+
+  initCharts();
+  if (document.getElementById("analytics").classList.contains("active")) {
+    updateCharts();
+  }
+};
+
+// Export Functions - MAKE GLOBAL
+window.exportAsCSV = function () {
+  if (transactions.length === 0) {
+    showToast("No data to export", "error");
+    return;
+  }
+
+  let csv = "Date,Time,Type,Description,Amount,Balance\n";
+  let runningBalance = 0;
+
+  transactions.forEach((t) => {
+    const date = new Date(t.date);
+    const dateStr = date.toLocaleDateString();
+    const timeStr = date.toLocaleTimeString();
+
+    if (t.type === "income" || t.type === "initial") {
+      runningBalance += t.amount;
     } else {
-      document.body.classList.remove("light-theme");
+      runningBalance -= t.amount;
     }
 
-    saveSettings();
-    showToast(`Theme changed to ${theme}`);
+    const amount = t.type === "expense" ? `-${t.amount}` : t.amount;
+    csv += `"${dateStr}","${timeStr}","${t.type}","${t.description}",${amount},${runningBalance}\n`;
+  });
 
-    // Reinit charts with new colors
-    initCharts();
-    if (document.getElementById("analytics").classList.contains("active")) {
-      updateCharts();
-    }
-  };
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `moneytrack-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
 
-  // Export Functions - MAKE GLOBAL
-  window.exportAsCSV = function () {
-    if (transactions.length === 0) {
-      showToast("No data to export");
-      return;
-    }
+  showToast("✓ Data exported as CSV", "success");
+};
 
-    let csv = "Date,Time,Type,Description,Amount,Balance\n";
-
-    let runningBalance = 0;
-    transactions.forEach((t) => {
-      const date = new Date(t.date);
-      const dateStr = date.toLocaleDateString();
-      const timeStr = date.toLocaleTimeString();
-
-      if (t.type === "income" || t.type === "initial") {
-        runningBalance += t.amount;
-      } else {
-        runningBalance -= t.amount;
-      }
-
-      const amount = t.type === "expense" ? `-${t.amount}` : t.amount;
-      csv += `"${dateStr}","${timeStr}","${t.type}","${t.description}",${amount},${runningBalance}\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `moneytrack-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-
-    showToast("Data exported as CSV");
-  };
-
-  window.exportAsText = function () {
-    if (transactions.length === 0) {
-      showToast("No data to export");
-      return;
-    }
-
-    let text = "MONEYTRACK TRANSACTION REPORT\n";
-    text += "================================\n\n";
-    text += `Generated: ${new Date().toLocaleString()}\n`;
-    text += `Current Balance: $${balance.toFixed(2)}\n`;
-    text += `Bubble Capacity: $${maxBalance.toFixed(2)}\n`;
-    text += `Fill Percentage: ${((balance / maxBalance) * 100).toFixed(
-      1
-    )}%\n\n`;
-    text += "TRANSACTIONS:\n";
-    text += "-------------\n\n";
-
-    transactions.forEach((t) => {
-      const date = new Date(t.date);
-      const sign = t.type === "expense" ? "-" : "+";
-      text += `${date.toLocaleDateString()} ${date.toLocaleTimeString()}\n`;
-      text += `  ${t.description}\n`;
-      text += `  ${sign}$${t.amount.toFixed(2)}\n\n`;
-    });
-
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `moneytrack-${new Date().toISOString().split("T")[0]}.txt`;
-    a.click();
-
-    showToast("Data exported as text file");
-  };
-
-  window.clearData = async function () {
-    if (
-      confirm("Are you sure you want to clear all data? This cannot be undone.")
-    ) {
-      try {
-        // Delete all transactions from Supabase
-        const { error } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("user_id", currentUser.id);
-
-        if (error) throw error;
-
-        // Reset local data
-        balance = 0;
-        transactions = [];
-
-        // Save settings
-        await saveSettings();
-
-        updateUI();
-        showToast("All data cleared");
-      } catch (error) {
-        console.error("Error:", error);
-        showToast("Error clearing data");
-      }
-    }
-  };
-
-  // Update capacity display
-  function updateCapacityDisplay() {
-    const capacityEl = document.getElementById("currentCapacity");
-    if (capacityEl) {
-      capacityEl.textContent = `$${maxBalance.toLocaleString()}`;
-    }
-
-    // Update the input placeholder
-    const capacityInput = document.getElementById("bubbleCapacity");
-    if (capacityInput) {
-      capacityInput.placeholder = maxBalance.toString();
-    }
+window.exportAsText = function () {
+  if (transactions.length === 0) {
+    showToast("No data to export", "error");
+    return;
   }
 
-  // Toast notification
-  function showToast(message) {
-    const toast = document.getElementById("toast");
-    if (toast) {
-      toast.textContent = message;
-      toast.classList.add("show");
+  let text = "MONEYTRACK TRANSACTION REPORT\n";
+  text += "================================\n\n";
+  text += `Generated: ${new Date().toLocaleString()}\n`;
+  text += `Current Balance: $${balance.toFixed(2)}\n`;
+  text += `Bubble Capacity: $${maxBalance.toFixed(2)}\n`;
+  text += `Fill Percentage: ${((balance / maxBalance) * 100).toFixed(1)}%\n\n`;
+  text += "TRANSACTIONS:\n";
+  text += "-------------\n\n";
 
-      setTimeout(() => {
-        toast.classList.remove("show");
-      }, 3000);
+  transactions.forEach((t) => {
+    const date = new Date(t.date);
+    const sign = t.type === "expense" ? "-" : "+";
+    text += `${date.toLocaleDateString()} ${date.toLocaleTimeString()}\n`;
+    text += `  ${t.description}\n`;
+    text += `  ${sign}$${t.amount.toFixed(2)}\n\n`;
+  });
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `moneytrack-${new Date().toISOString().split("T")[0]}.txt`;
+  a.click();
+
+  showToast("✓ Data exported as text file", "success");
+};
+
+window.clearData = async function () {
+  if (
+    confirm("Are you sure you want to clear all data? This cannot be undone.")
+  ) {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+
+      balance = 0;
+      transactions = [];
+
+      await saveSettings();
+      updateUI();
+      showToast("✓ All data cleared", "success");
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error clearing data", "error");
     }
   }
+};
 
-  // Format date helper
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+// Update capacity display
+function updateCapacityDisplay() {
+  const capacityEl = document.getElementById("currentCapacity");
+  if (capacityEl) {
+    capacityEl.textContent = `$${maxBalance.toLocaleString()}`;
   }
+
+  const capacityInput = document.getElementById("bubbleCapacity");
+  if (capacityInput) {
+    capacityInput.placeholder = maxBalance.toString();
+  }
+}
+
+// Toast notification
+// Toast notification - FASTER VERSION
+function showToast(message, type = "info") {
+  let toast = document.getElementById("toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toast";
+    toast.className = "toast";
+    document.body.appendChild(toast);
+  }
+  
+  // Clear any existing timeout
+  if (window.toastTimeout) {
+    clearTimeout(window.toastTimeout);
+  }
+  
+  toast.textContent = message;
+  toast.className = "toast"; // Reset classes
+  
+  if (type === "success") {
+    toast.style.borderLeft = "4px solid var(--success)";
+  } else if (type === "error") {
+    toast.style.borderLeft = "4px solid var(--danger)";
+  } else {
+    toast.style.borderLeft = "4px solid var(--primary)";
+  }
+  
+  // Force reflow to ensure animation works
+  void toast.offsetWidth;
+  
+  // Show immediately
+  toast.classList.add("show");
+  
+  // Hide after 2 seconds (faster than 3)
+  window.toastTimeout = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2000);
 }
