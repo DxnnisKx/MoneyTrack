@@ -192,20 +192,15 @@ async function setCapital() {
     return;
   }
 
-  await supabase.from("transactions").insert({
+  balance = amount;
+  await supabase.from("user_settings").upsert({
     user_id: currentUser.id,
-    type: "initial",
-    amount: amount,
-    description: "Startkapital",
+    balance: balance,
   });
 
   document.querySelector("#capital").value = "";
-
-  await loadData();
-  await supabase
-    .from("user_settings")
-    .upsert({ user_id: currentUser.id, balance: balance });
-  alert("Startkapital erfolgreich gesetzt");
+  document.querySelector("#balance").textContent = balance.toFixed(2);
+  alert("Startkapital auf €" + amount.toFixed(2) + " gesetzt");
 }
 
 function setupTabs() {
