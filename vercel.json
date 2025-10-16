@@ -4,11 +4,5 @@
       "source": "/(.*)",
       "destination": "/public/$1"
     }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/public/auth.html"
-    }
   ]
 }
