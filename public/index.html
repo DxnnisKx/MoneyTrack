@@ -1,307 +1,185 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MoneyTrack</title>
-
-    <!-- Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Styles -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link rel="icon" type="image/x-icon" href="money.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
-    <!-- Animated Background -->
-    <div class="animated-bg">
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <i class="bi bi-wallet2"></i>
-                <span>MoneyTrack</span>
-            </div>
-
-            <div class="nav-menu">
-                <button class="nav-link active" data-page="dashboard">
-                    <i class="bi bi-house"></i>
-                    <span class="nav-text">Dashboard</span>
-                </button>
-                <button class="nav-link" data-page="add">
-                    <i class="bi bi-plus-circle"></i>
-                    <span class="nav-text">Add</span>
-                </button>
-                <button class="nav-link" data-page="analytics">
-                    <i class="bi bi-bar-chart"></i>
-                    <span class="nav-text">Analytics</span>
-                </button>
-                <button class="nav-link" data-page="history">
-                    <i class="bi bi-clock-history"></i>
-                    <span class="nav-text">History</span>
-                </button>
-                <button class="nav-link" data-page="settings">
-                    <i class="bi bi-gear"></i>
-                    <span class="nav-text">Settings</span>
-                </button>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand">MoneyTrack</span>
+            <div>
+                <span class="text-white me-3" id="userEmail"></span>
+                <button class="btn btn-sm btn-outline-light" id="logoutBtn">Abmelden</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
+    <div class="container mt-3">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-tab="home">Start</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="history">Verlauf</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="charts">Statistik</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="settings">Export</a>
+            </li>
+        </ul>
+    </div>
 
-        <!-- Dashboard Page -->
-        <section class="page active" id="dashboard">
-            <div class="dashboard-container">
-                <!-- Balance Card with Dynamic Liquid Fill -->
-                <div class="balance-card glass">
-                    <div class="liquid-container">
-                        <div class="liquid-bubble">
-                            <div class="liquid" id="liquidFill">
-                                <svg class="liquid-wave" viewBox="0 0 500 150" preserveAspectRatio="none">
-                                    <path d="M0,100 C150,200 350,0 500,100 L500,150 L0,150 Z"></path>
-                                </svg>
-                                <svg class="liquid-wave wave-back" viewBox="0 0 500 150" preserveAspectRatio="none">
-                                    <path d="M0,100 C150,0 350,200 500,100 L500,150 L0,150 Z"></path>
-                                </svg>
-                                <div class="liquid-bg"></div>
-                            </div>
-                            <div class="balance-info">
-                                <span class="balance-label">Total Balance</span>
-                                <h1 class="balance-amount" id="balanceAmount">$0.00</h1>
-                                <span class="balance-percent" id="balancePercent">0% capacity</span>
-                            </div>
+    <div class="container mt-4">
+        <div class="card bg-primary text-white mb-4">
+            <div class="card-body text-center">
+                <h2>Kontostand: €<span id="balance">0.00</span></h2>
+            </div>
+        </div>
+
+        <div class="tab-content" id="home">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Neue Transaktion</div>
+                        <div class="card-body">
+                            <select id="type" class="form-select mb-2">
+                                <option value="income">Einnahme</option>
+                                <option value="expense">Ausgabe</option>
+                            </select>
+                            <input type="number" id="amount" class="form-control mb-2" placeholder="Betrag" step="0.01">
+                            <input type="text" id="description" class="form-control mb-2" placeholder="Beschreibung">
+                            <button class="btn btn-primary w-100" id="addBtn">Hinzufügen</button>
+                            
+                            <hr>
+                            <h6>Startkapital</h6>
+                            <input type="number" id="capital" class="form-control mb-2" placeholder="Betrag" step="0.01">
+                            <button class="btn btn-success w-100" id="capitalBtn">Startkapital setzen</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Quick Stats -->
-                <div class="stats-grid">
-                    <div class="stat-card glass">
-                        <div class="stat-icon income">
-                            <i class="bi bi-arrow-up"></i>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">Letzte Transaktionen</div>
+                        <div class="card-body">
+                            <div id="recentList"></div>
                         </div>
-                        <div class="stat-info">
-                            <span class="stat-label">Income</span>
-                            <span class="stat-value" id="totalIncome">+$0.00</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card glass">
-                        <div class="stat-icon expense">
-                            <i class="bi bi-arrow-down"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-label">Expenses</span>
-                            <span class="stat-value" id="totalExpenses">-$0.00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Transactions -->
-                <div class="recent-section glass">
-                    <h3>Recent Activity</h3>
-                    <div id="recentList" class="recent-list">
-                        <p class="empty-message">No transactions yet</p>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- Add Transaction Page -->
-        <section class="page" id="add">
-            <div class="add-container">
-                <h2>Add Transaction</h2>
+        <div class="tab-content d-none" id="history">
+            <div class="card">
+                <div class="card-header">Alle Transaktionen</div>
+                <div class="card-body">
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
 
-                <div class="transaction-form glass">
-                    <!-- Transaction Type Toggle -->
-                    <div class="type-toggle">
-                        <button class="type-btn active" onclick="setType('income')">
-                            <i class="bi bi-plus"></i> Income
-                        </button>
-                        <button class="type-btn" onclick="setType('expense')">
-                            <i class="bi bi-minus"></i>
-                            - Expense
-                        </button>
-                    </div>
-
-                    <!-- Amount Input -->
-                    <div class="form-group">
-                        <label>Amount</label>
-                        <div class="amount-input">
-                            <span class="currency">$</span>
-                            <input type="number" id="amount" placeholder="0.00" step="0.01">
+        <div class="tab-content d-none" id="charts">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Einnahmen Gesamt</h6>
+                            <h4 class="text-success" id="totalIncome">€0</h4>
                         </div>
                     </div>
-
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label>Description</label>
-                        <input type="text" id="description" placeholder="What's this for?">
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button class="submit-btn" id="submitBtn" onclick="addTransaction()">
-                        + Add Income
-                    </button>
                 </div>
-
-                <!-- Set Initial Capital -->
-                <div class="initial-capital glass">
-                    <h3><i class="bi bi-piggy-bank"></i> Set Initial Capital</h3>
-                    <p>Set your starting balance</p>
-                    <div class="capital-input">
-                        <div class="amount-input">
-                            <span class="currency">$</span>
-                            <input type="number" id="initialCapital" placeholder="0.00" step="0.01">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Ausgaben Gesamt</h6>
+                            <h4 class="text-danger" id="totalExpenses">€0</h4>
                         </div>
-                        <button class="capital-btn" onclick="setInitialCapital()">
-                            Set Capital
-                        </button>
                     </div>
                 </div>
-        </section>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Monatlich Durchschnitt</h6>
+                            <h4 id="monthlyAvg">€0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Jährlich Gesamt</h6>
+                            <h4 id="yearlyTotal">€0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Durchschnitt Einnahmen/Monat</h6>
+                            <h4 class="text-success" id="avgMonthlyIncome">€0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6>Durchschnitt Ausgaben/Monat</h6>
+                            <h4 class="text-danger" id="avgMonthlyExpense">€0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Analytics Page -->
-        <section class="page" id="analytics">
-            <div class="analytics-container">
-                <h2>Analytics</h2>
-
-                <div class="charts-grid">
-                    <!-- Waterfall Chart -->
-                    <div class="chart-card glass waterfall-card">
-                        <h3>Cash Flow Waterfall</h3>
-                        <div class="chart-wrapper">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Einnahmen vs Ausgaben</div>
+                        <div class="card-body">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Geldfluss</div>
+                        <div class="card-body">
                             <canvas id="waterfallChart"></canvas>
                         </div>
                     </div>
-
-                    <div class="chart-card glass">
-                        <h3>Income vs Expenses</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="comparisonChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="chart-card glass">
-                        <h3>Balance Trend</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="trendChart"></canvas>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Monatlicher Durchschnitt</div>
+                        <div class="card-body">
+                            <canvas id="avgChart"></canvas>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Summary Stats -->
-                <div class="summary-grid">
-                    <div class="summary-card glass">
-                        <span class="summary-label">This Month</span>
-                        <span class="summary-value" id="monthTotal">$0.00</span>
-                    </div>
-                    <div class="summary-card glass">
-                        <span class="summary-label">Average Daily</span>
-                        <span class="summary-value" id="dailyAvg">$0.00</span>
-                    </div>
-                    <div class="summary-card glass">
-                        <span class="summary-label">Transactions</span>
-                        <span class="summary-value" id="transCount">0</span>
-                    </div>
+        <div class="tab-content d-none" id="settings">
+            <div class="card">
+                <div class="card-header">Daten exportieren</div>
+                <div class="card-body">
+                    <p>Laden Sie Ihre Daten herunter</p>
+                    <button class="btn btn-primary me-2" id="exportCsvBtn">Als CSV exportieren</button>
+                    <button class="btn btn-secondary" id="exportTxtBtn">Als Text exportieren</button>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <!-- History Page -->
-        <section class="page" id="history">
-            <div class="history-container">
-                <div class="history-header">
-                    <h2>History</h2>
-                    <input type="text" class="search-input" placeholder="Search..." onkeyup="searchHistory(this.value)">
-                </div>
-
-                <div id="historyList" class="history-list">
-                    <p class="empty-message">No transactions yet</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Settings Page -->
-        <section class="page" id="settings">
-            <div class="settings-container">
-                <h2>Settings</h2>
-
-                <!-- Bubble Capacity Settings -->
-                <div class="settings-section glass">
-                    <h3><i class="bi bi-droplet"></i> Balance Bubble Capacity</h3>
-                    <p>Set the maximum capacity for your balance bubble (100% full)</p>
-                    <div class="capacity-setting">
-                        <div class="amount-input">
-                            <span class="currency">$</span>
-                            <input type="number" id="bubbleCapacity" placeholder="10000" step="100">
-                        </div>
-                        <button class="capacity-btn" onclick="setBubbleCapacity()">
-                            Set Capacity
-                        </button>
-                    </div>
-                    <p class="capacity-info">Current capacity: <span id="currentCapacity">$10,000</span></p>
-                </div>
-
-                <!-- Appearance -->
-                <div class="settings-section glass">
-                    <h3><i class="bi bi-palette"></i> Appearance</h3>
-                    <div class="theme-options">
-                        <button class="theme-btn active" onclick="setTheme('dark')">
-                            <span class="theme-preview dark"></span>
-                            Dark
-                        </button>
-                        <button class="theme-btn" onclick="setTheme('light')">
-                            <span class="theme-preview light"></span>
-                            Light
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Export Data -->
-                <div class="settings-section glass">
-                    <h3><i class="bi bi-database"></i> Export Data</h3>
-                    <div class="data-buttons">
-                        <button class="data-btn" onclick="exportAsCSV()">
-                            <i class="bi bi-file-earmark-spreadsheet"></i>
-                            Export as CSV
-                        </button>
-                        <button class="data-btn" onclick="exportAsText()">
-                            <i class="bi bi-file-text"></i>
-                            Export as Text
-                        </button>
-                        <button class="data-btn danger" onclick="clearData()">
-                            <i class="bi bi-trash"></i>
-                            Clear All Data
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Toast -->
-    <div id="toast" class="toast"></div>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
-
 </html>
