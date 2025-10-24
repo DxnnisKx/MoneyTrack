@@ -4,12 +4,9 @@ const supabase = window.supabase.createClient(
 );
 
 window.addEventListener("DOMContentLoaded", async function () {
-  console.log("Anmeldeseite geladen");
-
   const session = await supabase.auth.getSession();
 
   if (session.data.session) {
-    console.log("Benutzer bereits angemeldet");
     window.location.href = "index.html";
   }
 
@@ -20,8 +17,6 @@ window.addEventListener("DOMContentLoaded", async function () {
 });
 
 async function handleGoogleLogin() {
-  console.log("Google Anmeldung gestartet");
-
   const btn = document.querySelector("#googleBtn");
   const errorMsg = document.querySelector("#errorMsg");
 
@@ -31,8 +26,6 @@ async function handleGoogleLogin() {
   try {
     let redirectUrl = window.location.href.replace("auth.html", "index.html");
 
-    console.log("Weiterleitung zu:", redirectUrl);
-
     const result = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -41,7 +34,6 @@ async function handleGoogleLogin() {
     });
 
     if (result.error) {
-      console.error("Anmeldefehler:", result.error);
       errorMsg.textContent = result.error.message;
       errorMsg.classList.remove("d-none");
 
@@ -57,7 +49,6 @@ async function handleGoogleLogin() {
       btn.disabled = false;
     }
   } catch (error) {
-    console.error("Unerwarteter Fehler:", error);
     errorMsg.textContent = "Ein Fehler ist aufgetreten";
     errorMsg.classList.remove("d-none");
     btn.textContent = "Mit Google anmelden";

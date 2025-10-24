@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MoneyTrack</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="money.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -46,7 +47,7 @@
         <div class="tab-content" id="home">
             <div class="row">
                 <div class="col-md-4">
-                    <div class="card">
+                    <div class="card mb-3">
                         <div class="card-header">Neue Transaktion</div>
                         <div class="card-body">
                             <select id="type" class="form-select mb-2">
@@ -55,12 +56,15 @@
                             </select>
                             <input type="number" id="amount" class="form-control mb-2" placeholder="Betrag" step="0.01">
                             <input type="text" id="description" class="form-control mb-2" placeholder="Beschreibung">
-                            <button class="btn btn-primary w-100" id="addBtn">Hinzufügen</button>
-                            
-                            <hr>
-                            <h6>Startkapital</h6>
-                            <input type="number" id="capital" class="form-control mb-2" placeholder="Betrag" step="0.01">
-                            <button class="btn btn-success w-100" id="capitalBtn">Startkapital setzen</button>
+                            <button class="btn btn-success w-100" id="addBtn">Hinzufügen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card bg-danger text-white">
+                        <div class="card-header">Alles zurücksetzen</div>
+                        <div class="card-body">
+                            <p class="small mb-2">Alle Transaktionen löschen</p>
+                            <button class="btn btn-light text-danger w-100" id="resetBtn">Zurücksetzen</button>
                         </div>
                     </div>
                 </div>
@@ -181,5 +185,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
+    <script src="chart.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ const supabase = window.supabase.createClient(
 let currentUser = null;
 let balance = 0;
 let transactions = [];
-let charts = {};
+window.charts = {};
 
 window.addEventListener("DOMContentLoaded", async function () {
   const session = await supabase.auth.getSession();
@@ -26,22 +26,6 @@ window.addEventListener("DOMContentLoaded", async function () {
 });
 
 async function loadData() {
-  let settingsResult = await supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .single();
-
-  if (settingsResult.error) {
-    await supabase.from("user_settings").insert({
-      user_id: currentUser.id,
-      balance: 0,
-    });
-    balance = 0;
-  } else {
-    balance = parseFloat(settingsResult.data.balance) || 0;
-  }
-
   const transResult = await supabase
     .from("transactions")
     .select("*")
@@ -49,7 +33,6 @@ async function loadData() {
     .order("created_at", { ascending: false });
 
   transactions = transResult.data || [];
-
   calculateBalance();
   updateUI();
 }
@@ -58,7 +41,7 @@ function calculateBalance() {
   balance = 0;
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
-    if (t.type === "income" || t.type === "initial") {
+    if (t.type === "income") {
       balance += parseFloat(t.amount);
     } else if (t.type === "expense") {
       balance -= parseFloat(t.amount);
@@ -84,7 +67,6 @@ function updateRecentList() {
   }
 
   let html = '<table class="table table-sm"><tbody>';
-
   for (let i = 0; i < recent.length; i++) {
     const t = recent[i];
     const date = new Date(t.created_at).toLocaleDateString("de-DE");
@@ -96,19 +78,18 @@ function updateRecentList() {
     if (t.type === "expense") {
       cls = "expense";
       sign = "-";
-    } else if (t.type === "initial") {
-      cls = "initial";
-      sign = "";
     }
 
-    html += "<tr>";
-    html += "<td>" + date + "</td>";
-    html += "<td>" + t.description + "</td>";
+    html += "<tr><td>" + date + "</td><td>" + t.description + "</td>";
     html +=
-      '<td class="' + cls + '">' + sign + "€" + amount.toFixed(2) + "</td>";
-    html += "</tr>";
+      '<td class="' +
+      cls +
+      '">' +
+      sign +
+      "€" +
+      amount.toFixed(2) +
+      "</td></tr>";
   }
-
   html += "</tbody></table>";
   list.innerHTML = html;
 }
@@ -124,7 +105,6 @@ function updateHistoryList() {
 
   let html =
     '<table class="table"><thead><tr><th>Datum</th><th>Beschreibung</th><th>Typ</th><th>Betrag</th></tr></thead><tbody>';
-
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
     const date = new Date(t.created_at).toLocaleDateString("de-DE");
@@ -138,21 +118,25 @@ function updateHistoryList() {
       cls = "expense";
       sign = "-";
       typeText = "Ausgabe";
-    } else if (t.type === "initial") {
-      cls = "initial";
-      sign = "";
-      typeText = "Startkapital";
     }
 
-    html += "<tr>";
-    html += "<td>" + date + "</td>";
-    html += "<td>" + t.description + "</td>";
-    html += "<td>" + typeText + "</td>";
     html +=
-      '<td class="' + cls + '">' + sign + "€" + amount.toFixed(2) + "</td>";
-    html += "</tr>";
+      "<tr><td>" +
+      date +
+      "</td><td>" +
+      t.description +
+      "</td><td>" +
+      typeText +
+      "</td>";
+    html +=
+      '<td class="' +
+      cls +
+      '">' +
+      sign +
+      "€" +
+      amount.toFixed(2) +
+      "</td></tr>";
   }
-
   html += "</tbody></table>";
   list.innerHTML = html;
 }
@@ -178,29 +162,15 @@ async function addTransaction() {
   document.querySelector("#description").value = "";
 
   await loadData();
-  await supabase
-    .from("user_settings")
-    .upsert({ user_id: currentUser.id, balance: balance });
-  alert("Transaktion erfolgreich hinzugefügt");
 }
 
-async function setCapital() {
-  const amount = parseFloat(document.querySelector("#capital").value);
+async function resetAll() {
+  if (!confirm("Wirklich alle Transaktionen löschen?")) return;
 
-  if (!amount || amount <= 0) {
-    alert("Bitte gültigen Betrag eingeben");
-    return;
-  }
+  await supabase.from("transactions").delete().eq("user_id", currentUser.id);
 
-  balance = amount;
-  await supabase.from("user_settings").upsert({
-    user_id: currentUser.id,
-    balance: balance,
-  });
-
-  document.querySelector("#capital").value = "";
-  document.querySelector("#balance").textContent = balance.toFixed(2);
-  alert("Startkapital auf €" + amount.toFixed(2) + " gesetzt");
+  await loadData();
+  alert("Alle Transaktionen wurden gelöscht");
 }
 
 function setupTabs() {
@@ -221,166 +191,10 @@ function setupTabs() {
       document.querySelector("#" + this.dataset.tab).classList.remove("d-none");
 
       if (this.dataset.tab === "charts") {
-        setTimeout(loadCharts, 100);
+        setTimeout(() => loadCharts(transactions), 100);
       }
     });
   }
-}
-
-function loadCharts() {
-  let income = 0;
-  let expenses = 0;
-  let monthlyIncome = 0;
-  let monthlyExpense = 0;
-
-  for (let i = 0; i < transactions.length; i++) {
-    const amount = parseFloat(transactions[i].amount);
-    if (
-      transactions[i].type === "income" ||
-      transactions[i].type === "initial"
-    ) {
-      income += amount;
-      if (transactions[i].type === "income") {
-        monthlyIncome += amount;
-      }
-    } else {
-      expenses += amount;
-      monthlyExpense += amount;
-    }
-  }
-
-  const months = Math.max(1, getMonthsDifference());
-
-  document.querySelector("#totalIncome").textContent = "€" + income.toFixed(2);
-  document.querySelector("#totalExpenses").textContent =
-    "€" + expenses.toFixed(2);
-  document.querySelector("#monthlyAvg").textContent =
-    "€" + Math.abs((income - expenses) / months).toFixed(2);
-  document.querySelector("#yearlyTotal").textContent =
-    "€" + (income - expenses).toFixed(2);
-  document.querySelector("#avgMonthlyIncome").textContent =
-    "€" + (monthlyIncome / months).toFixed(2);
-  document.querySelector("#avgMonthlyExpense").textContent =
-    "€" + (monthlyExpense / months).toFixed(2);
-
-  const pieCanvas = document.querySelector("#pieChart");
-  if (charts.pie) charts.pie.destroy();
-
-  charts.pie = new Chart(pieCanvas.getContext("2d"), {
-    type: "doughnut",
-    data: {
-      labels: ["Einnahmen", "Ausgaben"],
-      datasets: [
-        {
-          data: [income, expenses],
-          backgroundColor: ["#10b981", "#ef4444"],
-          borderWidth: 0,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: "70%",
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: {
-            padding: 20,
-            usePointStyle: true,
-            font: { size: 14 },
-          },
-        },
-      },
-    },
-  });
-
-  const waterfallCanvas = document.querySelector("#waterfallChart");
-  if (charts.waterfall) charts.waterfall.destroy();
-
-  charts.waterfall = new Chart(waterfallCanvas.getContext("2d"), {
-    type: "line",
-    data: {
-      labels: ["Start", "Einnahmen", "Ausgaben", "Ende"],
-      datasets: [
-        {
-          label: "Geldfluss",
-          data: [0, income, income - expenses, income - expenses],
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          borderWidth: 3,
-          stepped: "middle",
-          fill: true,
-          tension: 0,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)",
-          },
-        },
-      },
-    },
-  });
-
-  const avgCanvas = document.querySelector("#avgChart");
-  if (charts.avg) charts.avg.destroy();
-
-  charts.avg = new Chart(avgCanvas.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels: ["Einnahmen/Monat", "Ausgaben/Monat"],
-      datasets: [
-        {
-          data: [monthlyIncome / months, monthlyExpense / months],
-          backgroundColor: ["#10b981", "#ef4444"],
-          borderRadius: 8,
-          borderSkipped: false,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)",
-          },
-        },
-      },
-    },
-  });
-}
-
-function getMonthsDifference() {
-  if (transactions.length === 0) return 0;
-
-  const dates = [];
-  for (let i = 0; i < transactions.length; i++) {
-    dates.push(new Date(transactions[i].created_at).getTime());
-  }
-
-  const minDate = new Date(Math.min(...dates));
-  const maxDate = new Date(Math.max(...dates));
-
-  return (
-    (maxDate.getFullYear() - minDate.getFullYear()) * 12 +
-    (maxDate.getMonth() - minDate.getMonth())
-  );
 }
 
 function exportCSV() {
@@ -389,36 +203,18 @@ function exportCSV() {
     return;
   }
 
-  let csv = "Datum,Beschreibung,Typ,Betrag,Kontostand\n";
-  let runningBalance = 0;
-  const reversed = [...transactions].reverse();
+  let csv = "Datum,Beschreibung,Typ,Betrag\n";
 
-  for (let i = 0; i < reversed.length; i++) {
-    const t = reversed[i];
-    const amount = parseFloat(t.amount);
-
-    if (t.type === "expense") {
-      runningBalance -= amount;
-    } else {
-      runningBalance += amount;
-    }
-
-    csv +=
-      new Date(t.created_at).toLocaleDateString("de-DE") +
-      ',"' +
-      t.description +
-      '",' +
-      t.type +
-      "," +
-      amount +
-      "," +
-      runningBalance.toFixed(2) +
-      "\n";
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i];
+    csv += new Date(t.created_at).toLocaleDateString("de-DE") + ",";
+    csv += t.description + ",";
+    csv += t.type + ",";
+    csv += t.amount + "\n";
   }
 
-  const blob = new Blob([csv], { type: "text/csv" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
   a.download = "moneytrack.csv";
   a.click();
 }
@@ -429,34 +225,31 @@ function exportTXT() {
     return;
   }
 
-  let text = "MONEYTRACK BERICHT\n==================\n\n";
-  text += "Erstellt: " + new Date().toLocaleString("de-DE") + "\n";
+  let text = "MoneyTrack Export\n\n";
   text += "Kontostand: €" + balance.toFixed(2) + "\n\n";
-  text += "TRANSAKTIONEN:\n--------------\n\n";
 
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
-    let sign = "+";
+    text += new Date(t.created_at).toLocaleDateString("de-DE") + " - ";
+    text += t.description + " - ";
 
+    let sign = "+";
     if (t.type === "expense") {
       sign = "-";
     }
 
-    text += new Date(t.created_at).toLocaleDateString("de-DE") + "\n";
-    text += "  " + t.description + "\n";
-    text += "  " + sign + "€" + parseFloat(t.amount).toFixed(2) + "\n\n";
+    text += sign + "€" + t.amount + "\n";
   }
 
-  const blob = new Blob([text], { type: "text/plain" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
   a.download = "moneytrack.txt";
   a.click();
 }
 
 function setupEventListeners() {
   document.querySelector("#addBtn").addEventListener("click", addTransaction);
-  document.querySelector("#capitalBtn").addEventListener("click", setCapital);
+  document.querySelector("#resetBtn").addEventListener("click", resetAll);
   document.querySelector("#exportCsvBtn").addEventListener("click", exportCSV);
   document.querySelector("#exportTxtBtn").addEventListener("click", exportTXT);
   document
