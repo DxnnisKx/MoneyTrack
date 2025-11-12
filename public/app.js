@@ -19,7 +19,6 @@ window.addEventListener("DOMContentLoaded", async function () {
   currentUser = session.data.session.user;
   document.querySelector("#userEmail").textContent =
     currentUser.email.split("@")[0];
-
   await loadData();
   setupEventListeners();
   setupTabs();
@@ -57,8 +56,6 @@ function updateUI() {
 
 function updateRecentList() {
   const list = document.querySelector("#recentList");
-  if (!list) return;
-
   const recent = transactions.slice(0, 5);
 
   if (recent.length === 0) {
@@ -69,7 +66,7 @@ function updateRecentList() {
   let html = '<table class="table table-sm"><tbody>';
   for (let i = 0; i < recent.length; i++) {
     const t = recent[i];
-    const date = new Date(t.created_at).toLocaleDateString("de-DE");
+    const date = new Date(t.created_at).toLocaleDateString();
     const amount = parseFloat(t.amount);
 
     let cls = "income";
@@ -107,7 +104,7 @@ function updateHistoryList() {
     '<table class="table"><thead><tr><th>Datum</th><th>Beschreibung</th><th>Typ</th><th>Betrag</th></tr></thead><tbody>';
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
-    const date = new Date(t.created_at).toLocaleDateString("de-DE");
+    const date = new Date(t.created_at).toLocaleDateString();
     const amount = parseFloat(t.amount);
 
     let cls = "income";
@@ -207,14 +204,14 @@ function exportCSV() {
 
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
-    csv += new Date(t.created_at).toLocaleDateString("de-DE") + ",";
+    csv += new Date(t.created_at).toLocaleDateString() + ",";
     csv += t.description + ",";
     csv += t.type + ",";
     csv += t.amount + "\n";
   }
 
   const a = document.createElement("a");
-  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.href = "data:text/csv;charset=utf-8," + csv;
   a.download = "moneytrack.csv";
   a.click();
 }
@@ -230,7 +227,7 @@ function exportTXT() {
 
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
-    text += new Date(t.created_at).toLocaleDateString("de-DE") + " - ";
+    text += new Date(t.created_at).toLocaleDateString() + " - ";
     text += t.description + " - ";
 
     let sign = "+";
@@ -242,7 +239,7 @@ function exportTXT() {
   }
 
   const a = document.createElement("a");
-  a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
+  a.href = "data:text/plain;charset=utf-8," + text;
   a.download = "moneytrack.txt";
   a.click();
 }

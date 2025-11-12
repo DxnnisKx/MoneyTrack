@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
@@ -54,12 +56,12 @@
                                 <option value="income">Einnahme</option>
                                 <option value="expense">Ausgabe</option>
                             </select>
-                            <input type="number" id="amount" class="form-control mb-2" placeholder="Betrag" step="0.01">
+                            <input type="number" id="amount" class="form-control mb-2" placeholder="Betrag">
                             <input type="text" id="description" class="form-control mb-2" placeholder="Beschreibung">
                             <button class="btn btn-success w-100" id="addBtn">Hinzufügen</button>
                         </div>
                     </div>
-                    
+
                     <div class="card bg-danger text-white">
                         <div class="card-header">Alles zurücksetzen</div>
                         <div class="card-body">
@@ -123,7 +125,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="card text-center">
@@ -144,7 +146,7 @@
             </div>
 
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">Einnahmen vs Ausgaben</div>
                         <div class="card-body">
@@ -152,19 +154,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">Geldfluss</div>
+                        <div class="card-header">Bilanz</div>
                         <div class="card-body">
                             <canvas id="waterfallChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">Monatlicher Durchschnitt</div>
-                        <div class="card-body">
-                            <canvas id="avgChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -187,4 +181,5 @@
     <script src="app.js"></script>
     <script src="chart.js"></script>
 </body>
+
 </html>

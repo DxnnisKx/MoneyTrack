@@ -1,33 +1,26 @@
+.card {
+  border: none;
+}
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 600;
+}
+
+#googlediv {
+  margin-top: 13.5rem;
+}
+#googleicon {
+  width: 20px;
+  height: 20px;
+}
+#waterfallChart {
+  min-height: 300px;
+}
 .income {
-    color: #10b981;
-    font-weight: 500;
+  color: #10b981;
 }
 
 .expense {
-    color: #ef4444;
-    font-weight: 500;
-}
-
-.tab-content {
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-canvas {
-    max-height: 350px;
-}
-
-.card {
-    border: none;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    font-weight: 600;
+  color: #ef4444;
 }
